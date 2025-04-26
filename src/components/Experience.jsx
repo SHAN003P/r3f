@@ -50,6 +50,8 @@ export const Experience = () => {
 
   const cameraGroup = useRef();
   const scroll = useScroll();
+  const cameraRef = useRef();
+  const airplane = useRef();
 
   useFrame((_state, delta) => {
     const curPointIndex = Math.min(
@@ -58,24 +60,50 @@ export const Experience = () => {
     );
 
     const curPoint = linePoints[curPointIndex];
+    const nextPoint = linePoints[Math.min(curPointIndex + 1, linePoints.length - 1)];
+
+    const xDisplacement = (nextPoint.x - curPoint.x) * 80;
+    const angleRotation =
+      (xDisplacement < 0 ? 1 : -1) *
+      Math.min(Math.abs(xDisplacement), Math.PI / 3);
+
+    const targetAirplaneQuaternion = new THREE.Quaternion().setFromEuler(
+      new THREE.Euler(
+        airplane.current.rotation.x,
+        airplane.current.rotation.y,
+        angleRotation
+      )
+    );
+
+    airplane.current.quaternion.slerp(targetAirplaneQuaternion, delta * 2);
 
     //Smoothly move the camera group to the current point
-    cameraGroup.current.position.lerp(curPoint, delta * 24);
+    cameraGroup.current.position.lerp(curPoint, delta * 20);
+
+    // Look ahead to next point
+    cameraRef.current.lookAt(nextPoint);
   });
 
   return (
     <>
-      <OrbitControls enableZoom={false} />
+      {/* <OrbitControls enableZoom={false} /> */}
       <group ref={cameraGroup}>
         <Background />
-        <PerspectiveCamera position={[0, 0, 5]} fov={30} makeDefault />
-        <Float floatIntensity={2} speed={2}>
-          <Airplane
-            rotation-y={Math.PI / 2}
-            scale={[0.2, 0.2, 0.2]}
-            position={0.1}
-          />
-        </Float>
+        <PerspectiveCamera
+          ref={cameraRef}
+          position={[0, 0, 5]}
+          fov={30}
+          makeDefault
+        />
+        <group ref={airplane}>
+          <Float floatIntensity={2} speed={2}>
+            <Airplane
+              rotation-y={Math.PI / 2}
+              scale={[0.2, 0.2, 0.2]}
+              position={0.1}
+            />
+          </Float>
+        </group>
       </group>
 
       {/* Lines */}
