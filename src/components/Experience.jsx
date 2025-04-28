@@ -2,17 +2,40 @@ import {
   Float,
   OrbitControls,
   PerspectiveCamera,
+  shaderMaterial,
+  Text,
   useScroll,
 } from "@react-three/drei";
 import Background from "./Background";
 import { Airplane } from "./Airplane";
 import { Cloud } from "./Cloud";
 import * as THREE from "three";
-import { useMemo } from "react";
-import { useRef } from "react";
-import { useFrame } from "@react-three/fiber";
+import { useEffect, useMemo, useRef } from "react";
+import { extend, useFrame } from "@react-three/fiber";
 
 const LINE_NB_POINTS = 2000;
+
+// Custom Rainbow Material, for text's Rainbow color
+const RainbowTextMaterial = shaderMaterial(
+  { time: 0 },
+  `
+    varying vec2 vUv;
+    void main() {
+      vUv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `,
+  `
+    uniform float time;
+    varying vec2 vUv;
+    void main() {
+      vec3 color = 0.4 + 0.3 * cos(6.2831 * (vUv.x + time + vec3(0.0, 0.33, 0.66)));
+      gl_FragColor = vec4(color, 1.0);
+    }
+  `
+);
+
+extend({ RainbowTextMaterial });
 
 export const Experience = () => {
   const curve = useMemo(() => {
@@ -28,7 +51,11 @@ export const Experience = () => {
         new THREE.Vector3(5, 0, -70),
         new THREE.Vector3(0, 0, -80),
         new THREE.Vector3(0, 0, -90),
-        new THREE.Vector3(0, 0, -100),
+        new THREE.Vector3(0, 0, -101),
+        new THREE.Vector3(0, 0, -102),
+        new THREE.Vector3(0, 0, -103),
+        new THREE.Vector3(0, 0, -104),
+        new THREE.Vector3(0, 0, -105),
       ],
       false,
       "catmullrom",
@@ -44,23 +71,28 @@ export const Experience = () => {
     const shape = new THREE.Shape();
     shape.moveTo(0, -0.2);
     shape.lineTo(0, 0.2);
-
     return shape;
-  }, [curve]);
+  }, []);
 
   const cameraGroup = useRef();
-  const scroll = useScroll();
   const cameraRef = useRef();
   const airplane = useRef();
+  const rainbowMaterialRef = useRef(); // Use ref for RainbowTextMaterial
+  const scroll = useScroll();
 
   useFrame((_state, delta) => {
+    if (rainbowMaterialRef.current) {
+      rainbowMaterialRef.current.time += delta;
+    }
+
     const curPointIndex = Math.min(
       Math.round(scroll.offset * linePoints.length),
       linePoints.length - 1
     );
 
     const curPoint = linePoints[curPointIndex];
-    const nextPoint = linePoints[Math.min(curPointIndex + 1, linePoints.length - 1)];
+    const nextPoint =
+      linePoints[Math.min(curPointIndex + 1, linePoints.length - 1)];
 
     const xDisplacement = (nextPoint.x - curPoint.x) * 80;
     const angleRotation =
@@ -77,16 +109,12 @@ export const Experience = () => {
 
     airplane.current.quaternion.slerp(targetAirplaneQuaternion, delta * 2);
 
-    //Smoothly move the camera group to the current point
     cameraGroup.current.position.lerp(curPoint, delta * 20);
-
-    // Look ahead to next point
     cameraRef.current.lookAt(nextPoint);
   });
 
   return (
     <>
-      {/* <OrbitControls enableZoom={false} /> */}
       <group ref={cameraGroup}>
         <Background />
         <PerspectiveCamera
@@ -106,16 +134,82 @@ export const Experience = () => {
         </group>
       </group>
 
-      {/* Lines */}
-      <group position-y={-2}>
-        {/* <Line
-          points={linePoints}
-          color={"white"}
-          opacity={0.7}
-          transparent
-          lineWidth={16}
-        /> */}
+      {/* Text Content */}
+      <group position={[1, 0, -10]}>
+        <Float floatIntensity={5} speed={5}>
+          <Text
+            anchorX="left"
+            anchorY="center"
+            fontSize={0.22}
+            fontWeight={500}
+            maxWidth={2.5}
+          >
+            <rainbowTextMaterial ref={rainbowMaterialRef} attach="material" />
+            Welcome to Udankhatola...
+          </Text>
 
+          <Text
+            color="white"
+            anchorX="left"
+            anchorY="top"
+            position-y={-0.66}
+            fontSize={0.18}
+            fontWeight={300}
+            maxWidth={2.5}
+          >
+            Have a seat and enjoy the ride!
+          </Text>
+        </Float>
+      </group>
+
+      <group position={[-5, 0, -30]}>
+        <Float floatIntensity={5} speed={3}>
+          <Text
+            color="white"
+            anchorX="left"
+            anchorY="middle"
+            fontSize={0.18}
+            maxWidth={2.5}
+          >
+            Ek modddd ayaaa...
+            {"\n"}
+            Me uthhe passenger chhod ayaaa 😁
+          </Text>
+        </Float>
+      </group>
+
+      <group position={[7, 0, -70]}>
+        <Float floatIntensity={5} speed={3}>
+          <Text
+            color="white"
+            anchorX="left"
+            anchorY="middle"
+            fontSize={0.18}
+            maxWidth={2.5}
+          >
+            👈 iss taraf jaa bhai...
+          </Text>
+        </Float>
+      </group>
+
+      <group position={[0, 0, -105]}>
+        <Float floatIntensity={5} speed={10}>
+          <Text
+            color="#701b1b"
+            anchorX="left"
+            anchorY="middle"
+            fontSize={0.18}
+            maxWidth={2.5}
+          >
+            Bass kar bhai,
+            {"\n"}
+            Aage kuch nai hai...🤚
+          </Text>
+        </Float>
+      </group>
+
+      {/* Line Path */}
+      <group position-y={-2}>
         <mesh>
           <extrudeGeometry
             args={[
