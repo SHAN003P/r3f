@@ -13,11 +13,7 @@ import * as THREE from "three";
 import { useEffect, useMemo, useRef } from "react";
 import { extend, useFrame } from "@react-three/fiber";
 
-const LINE_NB_POINTS = 2000;
-const CURVE_DISTANCE = 250;
-const CURVE_AHEAD_CAMERA = 0.008;
-const CURVE_AHEAD_ARIPLANE = 0.02;
-const AIRPLANE_MAX_ANGLE = 35;
+const LINE_NB_POINTS = 12000;
 
 // Custom Rainbow Material, for text's Rainbow color
 const RainbowTextMaterial = shaderMaterial(
@@ -46,13 +42,16 @@ export const Experience = () => {
     return new THREE.CatmullRomCurve3(
       [
         new THREE.Vector3(0, 0, 0),
-        new THREE.Vector3(0, 0, -CURVE_DISTANCE),
-        new THREE.Vector3(100, 0, -2 * CURVE_DISTANCE),
-        new THREE.Vector3(-100, 0, -3 * CURVE_DISTANCE),
-        new THREE.Vector3(100, 0, -4 * CURVE_DISTANCE),
-        new THREE.Vector3(5, 0, -5 * CURVE_DISTANCE),
-        new THREE.Vector3(7, 0, -6 * CURVE_DISTANCE),
-        new THREE.Vector3(5, 0, -7 * CURVE_DISTANCE),
+        new THREE.Vector3(0, 0, -10),
+        new THREE.Vector3(-2, 0, -20),
+        new THREE.Vector3(-3, 0, -30),
+        new THREE.Vector3(0, 0, -40),
+        new THREE.Vector3(5, 0, -50),
+        new THREE.Vector3(7, 0, -60),
+        new THREE.Vector3(5, 0, -70),
+        new THREE.Vector3(0, 0, -80),
+        new THREE.Vector3(0, 0, -90),
+        new THREE.Vector3(0, 0, -100),
       ],
       false,
       "catmullrom",
@@ -81,66 +80,33 @@ export const Experience = () => {
     if (rainbowMaterialRef.current) {
       rainbowMaterialRef.current.time += delta;
     }
-    const scrollOffset = Math.max(0, scroll.offset);
 
-    const curPoint = curve.getPoint(scrollOffset);
-
-    //follow the curve points
-    cameraGroup.current.position.lerp(curPoint, delta * 24);
-
-    const lookAtPoint = curve.getPoint(
-      Math.min(scrollOffset + CURVE_AHEAD_CAMERA, 1)
+    const curPointIndex = Math.min(
+      Math.round(scroll.offset * linePoints.length),
+      linePoints.length - 1
     );
 
-    const currectLookAt = cameraGroup.current.getWorldDirection(
-      new THREE.Vector3()
-    );
-    const targetLookAt = new THREE.Vector3()
-      .subVectors(curPoint, lookAtPoint)
-      .normalize();
+    const curPoint = linePoints[curPointIndex];
+    const nextPoint =
+      linePoints[Math.min(curPointIndex + 1, linePoints.length - 1)];
 
-    const lookAt = currectLookAt.lerp(targetLookAt, delta * 24);
-    cameraGroup.current.lookAt(
-      cameraGroup.current.position.clone().add(lookAt)
-    );
-
-    //Airplane rotation
-    const tangent = curve.getTangent(scrollOffset + CURVE_AHEAD_ARIPLANE);
-
-    const nonLerpLookAt = new THREE.Group();
-    nonLerpLookAt.position.copy(curPoint);
-    nonLerpLookAt.lookAt(nonLerpLookAt.position.clone().add(targetLookAt));
-
-    tangent.applyAxisAngle(
-      new THREE.Vector3(0, 1, 0),
-      -nonLerpLookAt.rotation.y
-    );
-
-    let angle = Math.atan2(-tangent.z, tangent.x);
-    angle = -Math.PI / 2 + angle;
-
-    let angleDegrees = (angle * 180) / Math.PI;
-    angleDegrees *= 2.4;
-
-    //limit plane angle
-    if (angleDegrees < 0) {
-      angleDegrees = Math.max(angleDegrees, -AIRPLANE_MAX_ANGLE);
-    }
-    if (angleDegrees > 0) {
-      angleDegrees = Math.min(angleDegrees, AIRPLANE_MAX_ANGLE);
-    }
-
-    //set back angle
-    angle = (angleDegrees * Math.PI) / 180;
+    const xDisplacement = (nextPoint.x - curPoint.x) * 80;
+    const angleRotation =
+      (xDisplacement < 0 ? 1 : -1) *
+      Math.min(Math.abs(xDisplacement), Math.PI / 3);
 
     const targetAirplaneQuaternion = new THREE.Quaternion().setFromEuler(
       new THREE.Euler(
         airplane.current.rotation.x,
         airplane.current.rotation.y,
-        angle
+        angleRotation
       )
     );
+
     airplane.current.quaternion.slerp(targetAirplaneQuaternion, delta * 2);
+
+    cameraGroup.current.position.lerp(curPoint, delta * 20);
+    cameraRef.current.lookAt(nextPoint);
   });
 
   return (
@@ -166,7 +132,7 @@ export const Experience = () => {
 
       {/* Text Content */}
       <group position={[1, 0, -10]}>
-        <Float floatIntensity={10} speed={5}>
+        <Float floatIntensity={5} speed={5}>
           <Text
             anchorX="left"
             anchorY="center"
@@ -179,7 +145,7 @@ export const Experience = () => {
           </Text>
 
           <Text
-            color="black"
+            color="white"
             anchorX="left"
             anchorY="top"
             position-y={-0.66}
@@ -222,7 +188,7 @@ export const Experience = () => {
         </Float>
       </group>
 
-      <group position={[5, 0, -7 * CURVE_DISTANCE]}>
+      <group position={[0, 0, -100]}>
         <Float floatIntensity={5} speed={10}>
           <Text
             color="#701b1b"
@@ -256,26 +222,26 @@ export const Experience = () => {
       </group>
 
       {/* Clouds */}
-      <Cloud scale={[1, 1, 1.5]} position={[-3.5, -1.2, -7]} />
+      <Cloud opacity={0.5} scale={[0.3, 0.3, 0.3]} position={[-2, 1, -3]} />
       <Cloud
         opacity={0.5}
-        scale={[1, 1, 2]}
-        position={[3.5, -1, -10]}
-        rotation-y={Math.PI}
+        scale={[0.2, 0.3, 0.4]}
+        position={[1.5, -0.5, -1.2]}
       />
       <Cloud
-        scale={[1, 1, 1]}
-        position={[-3.5, 0.2, -12]}
-        rotation-y={Math.PI / 3}
-      />
-      <Cloud scale={[1, 1, 1]} position={[3.5, 0.2, -12]} />
-      <Cloud
-        scale={[0.4, 0.4, 0.4]}
+        opacity={0.7}
+        scale={[0.3, 0.3, 0.4]}
+        position={[2, -0.2, -2]}
         rotation-y={Math.PI / 9}
-        position={[1, -0.2, -12]}
       />
-      <Cloud scale={[0.3, 0.5, 2]} position={[-4, -0.5, -53]} />
-      <Cloud scale={[0.8, 0.8, 0.8]} position={[-1, -1.5, -100]} />
+      <Cloud
+        opacity={0.7}
+        scale={[0.4, 0.4, 0.4]}
+        position={[1, -0.2, -12]}
+        rotation-y={Math.PI / 9}
+      />
+      <Cloud opacity={0.7} scale={[0.5, 0.5, 0.5]} position={[-1, 1, -53]} />
+      <Cloud opacity={0.3} scale={[0.8, 0.8, 0.8]} position={[0, 1, -60]} />
     </>
   );
 };

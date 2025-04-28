@@ -7,7 +7,7 @@ function App() {
     <>
       <Canvas>
         <color attach="background" args={["#ececec"]} />
-        <ScrollControls pages={10} damping={0.5}>
+        <ScrollControls pages={50} damping={0.5}>
           <Experience />
         </ScrollControls>
       </Canvas>
